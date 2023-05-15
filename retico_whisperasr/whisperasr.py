@@ -54,7 +54,7 @@ class WhisperASR:
         if self.framerate != 16_000:
             # resample if framerate is not 16 kHz
             s = pydub.AudioSegment(
-            audio, sample_width=2, channels=1, frame_rate=self.framerate
+                audio, sample_width=2, channels=1, frame_rate=self.framerate
             )
             s = s.set_frame_rate(16_000)
             return s._data
@@ -67,19 +67,15 @@ class WhisperASR:
             frame_length = len(self.audio_buffer[0]) / 2
             self._n_sil_frames = int(self.silence_dur / (frame_length / 16_000))
         return self._n_sil_frames
-        
+
     def recognize_silence(self):
         n_sil_frames = self.get_n_sil_frames()
         if not n_sil_frames or len(self.audio_buffer) < n_sil_frames:
             return True
         silence_counter = 0
-
-        # count the number of frames with silence
         for a in self.audio_buffer[-n_sil_frames:]:
             if not self.vad.is_speech(a, 16_000):
                 silence_counter += 1
-        
-        # if the amount of silence is greater than threshold return True 
         if silence_counter >= int(self.silence_threshold * n_sil_frames):
             return True
         return False
@@ -104,12 +100,15 @@ class WhisperASR:
         npa = np.frombuffer(full_audio, dtype=np.int16).astype(np.double)
         if len(npa) < 10:
             return None, False
-        input_values = self.processor(
-            npa, return_tensors="pt", sampling_rate=16000
-        ).input_values
-        logits = self.model(input_values).logits
-        predicted_ids = np.argmax(logits.detach().numpy(), axis=-1)
-        transcription = self.processor.batch_decode(predicted_ids)[0].lower()
+        print(full_audio)
+        print(npa)
+        input_features = self.processor(
+            npa, sampling_rate=16000, return_tensors="pt"
+        ).input_features
+
+        predicted_ids = self.model.generate(input_features)
+        transcription = self.processor.batch_decode(predicted_ids,skip_special_tokens=True)[0]
+        
 
         if silence:
             self.vad_state = False
@@ -138,3 +137,71 @@ class WhisperASRModule(retico_core.AbstractModule):
     @staticmethod
     def output_iu():
         return SpeechRecognitionIU
+    
+    def __init__(self, framerate=None, silence_dur=1, **kwargs):
+        super().__init__(**kwargs)
+
+        # if language not in self.LANGUAGE_MAPPING.keys():
+        #     print("Unknown ASR language. Defaulting to English (en).")
+        #     language = "en"
+
+        # self.language = language
+        self.acr = WhisperASR(
+            # whisper_model=self.LANGUAGE_MAPPING[language],
+            silence_dur=silence_dur,
+        )
+        self.framerate = framerate
+        self.silence_dur = silence_dur
+        self._asr_thread_active = False
+        self.latest_input_iu = None
+
+    def process_update(self, update_message):
+        for iu, ut in update_message:
+            # Audio IUs are only added and never updated.
+            if ut != retico_core.UpdateType.ADD:
+                continue
+            if self.framerate is None:
+                self.framerate = iu.rate
+                self.acr.framerate = self.framerate
+            self.acr.add_audio(iu.raw_audio)
+            if not self.latest_input_iu:
+                self.latest_input_iu = iu
+
+    def _asr_thread(self):
+        while self._asr_thread_active:
+            time.sleep(0.5)
+            if not self.framerate:
+                continue
+            prediction, vad = self.acr.recognize()
+            print(prediction)
+            if prediction is None:
+                continue
+            end_of_utterance = not vad
+            um, new_tokens = retico_core.text.get_text_increment(self, prediction)
+
+            if len(new_tokens) == 0 and vad:
+                continue
+
+            for i, token in enumerate(new_tokens):
+                output_iu = self.create_iu(self.latest_input_iu)
+                eou = i == len(new_tokens) - 1 and end_of_utterance
+                output_iu.set_asr_results([prediction], token, 0.0, 0.99, eou)
+                self.current_output.append(output_iu)
+                um.add_iu(output_iu, retico_core.UpdateType.ADD)
+
+            if end_of_utterance:
+                for iu in self.current_output:
+                    self.commit(iu)
+                    um.add_iu(iu, retico_core.UpdateType.COMMIT)
+                self.current_output = []
+
+            self.latest_input_iu = None
+            self.append(um)
+
+    def prepare_run(self):
+        self._asr_thread_active = True
+        threading.Thread(target=self._asr_thread).start()
+
+    def shutdown(self):
+        self._asr_thread_active = False
+        self.acr.reset()
