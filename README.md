@@ -5,6 +5,35 @@ Local whisper ASR Module for ReTiCo. See citation below for modle information.
 
 
 ### Example
+```
+import sys
+from retico import *
+
+prefix = '/path/to/module/'
+sys.path.append(prefix+'retico-whisperasr')
+
+from retico_whisperasr import WhisperASRModule
+
+
+
+microphone = modules.MicrophoneModule(rate=16000)
+
+asr = WhisperASRModule()
+
+printer = modules.TextPrinterModule()
+debug = modules.DebugModule()
+
+microphone.subscribe(asr)
+asr.subscribe(printer)
+# asr.subscribe(debug)
+
+run(microphone)
+
+print("Network is running")
+input()
+
+stop(microphone)
+```
 
 Citation
 ```
