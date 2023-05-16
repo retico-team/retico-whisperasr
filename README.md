@@ -5,7 +5,8 @@ Local whisper ASR Module for ReTiCo. See citation below for modle information.
 
 
 ### Example
-```
+
+```python
 import sys
 from retico import *
 
