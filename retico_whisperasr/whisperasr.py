@@ -97,11 +97,9 @@ class WhisperASR:
         full_audio = b""
         for a in self.audio_buffer:
             full_audio += a
-        npa = np.frombuffer(full_audio, dtype=np.int16).astype(np.double)
+        npa = np.frombuffer(full_audio, dtype=np.int16).astype(np.double) / 32768.0 # normalize between -1 and 1
         if len(npa) < 10:
             return None, False
-        print(full_audio)
-        print(npa)
         input_features = self.processor(
             npa, sampling_rate=16000, return_tensors="pt"
         ).input_features
@@ -173,7 +171,6 @@ class WhisperASRModule(retico_core.AbstractModule):
             if not self.framerate:
                 continue
             prediction, vad = self.acr.recognize()
-            print(prediction)
             if prediction is None:
                 continue
             end_of_utterance = not vad
