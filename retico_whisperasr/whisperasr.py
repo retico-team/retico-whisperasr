@@ -29,18 +29,23 @@ class WhisperASR:
         silence_dur=1,
         vad_agressiveness=3,
         silence_threshold=0.75,
+        language=None,
+        task="transcribe"
     ):
         self.processor = WhisperProcessor.from_pretrained(whisper_model)
         self.model = WhisperForConditionalGeneration.from_pretrained(whisper_model)
-        self.model.config.forced_decoder_ids = None
 
-        # force language to french
-        # forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-        # language="french", task="transcribe")
-        
-        # translation from french to english
-        # forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-        # language="french", task="translate")
+        if language == None: 
+            self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
+            language="english", task="transcribe")
+            print("Defaulting to english.")
+
+        else:
+            self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
+                language=language, task=task)
+            print("Input Language: ", language)
+            print("Task: ", task)
+
 
         self.audio_buffer = []
         self.framerate = framerate
@@ -104,7 +109,7 @@ class WhisperASR:
             npa, sampling_rate=16000, return_tensors="pt"
         ).input_features
 
-        predicted_ids = self.model.generate(input_features)
+        predicted_ids = self.model.generate(input_features, forced_decoder_ids=self.forced_decoder_ids)
         transcription = self.processor.batch_decode(predicted_ids,skip_special_tokens=True)[0]
         
 
@@ -136,17 +141,13 @@ class WhisperASRModule(retico_core.AbstractModule):
     def output_iu():
         return SpeechRecognitionIU
     
-    def __init__(self, framerate=None, silence_dur=1, **kwargs):
+    def __init__(self, framerate=None, silence_dur=1, language=None, task="transcribe", **kwargs):
         super().__init__(**kwargs)
 
-        # if language not in self.LANGUAGE_MAPPING.keys():
-        #     print("Unknown ASR language. Defaulting to English (en).")
-        #     language = "en"
-
-        # self.language = language
         self.acr = WhisperASR(
-            # whisper_model=self.LANGUAGE_MAPPING[language],
             silence_dur=silence_dur,
+            language=language,
+            task=task,
         )
         self.framerate = framerate
         self.silence_dur = silence_dur
