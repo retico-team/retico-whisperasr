@@ -1,5 +1,5 @@
 # retico-whisperasr
-Local whisper ASR Module for ReTiCo. See citation below for modle information. 
+Local whisper ASR Module for ReTiCo. See citation below for model information. 
 
 ### Installations and requirements
 
