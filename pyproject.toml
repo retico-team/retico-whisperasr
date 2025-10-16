@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retico-whisperasr"
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "pyaudio",
+    "pydub",
+    "retico-core>=2.0.0",
+    "transformers",
+    "webrtcvad",
+]
+authors = [
+    {name = "Ryan Whetten"},
+]
+description = "A module that recognizes speech using Whisper."
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["retico", "ASR", "dialogue", "dialog", "incremental"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: Apache Software License",
+]
+
