@@ -18,6 +18,8 @@ import pydub
 import webrtcvad
 import numpy as np
 import time
+import torch
+#check gpu,mps, then cpu
 
 transformers.logging.set_verbosity_error()
 
@@ -30,10 +32,17 @@ class WhisperASR:
         vad_agressiveness=3,
         silence_threshold=0.75,
         language=None,
-        task="transcribe"
+        task="transcribe",
+        use_accelerator=True
     ):
+        
+        if use_accelerator == False:
+            self.device = "cpu"
+        else:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
         self.processor = WhisperProcessor.from_pretrained(whisper_model)
-        self.model = WhisperForConditionalGeneration.from_pretrained(whisper_model)
+        self.model = WhisperForConditionalGeneration.from_pretrained(whisper_model).to(self.device)
 
         if language == None: 
             self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
@@ -109,7 +118,7 @@ class WhisperASR:
             npa, sampling_rate=16000, return_tensors="pt"
         ).input_features
 
-        predicted_ids = self.model.generate(input_features, forced_decoder_ids=self.forced_decoder_ids)
+        predicted_ids = self.model.generate(input_features.to(self.device), forced_decoder_ids=self.forced_decoder_ids)
         transcription = self.processor.batch_decode(predicted_ids,skip_special_tokens=True)[0]
         
 

@@ -3,6 +3,11 @@ Local whisper ASR Module for ReTiCo. See citation below for model information.
 
 ### Installations and requirements
 
+```
+pip install git+https://github.com/retico-team/retico-whisperasr.git
+
+```
+
 
 ### Example
 
