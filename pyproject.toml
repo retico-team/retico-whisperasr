@@ -11,7 +11,7 @@ dependencies = [
     "pydub",
     "retico-core>=2.0.0",
     "transformers",
-    "webrtcvad",
+    "webrtcvad-wheels",
 ]
 authors = [
     {name = "Ryan Whetten"},
