@@ -36,13 +36,13 @@ class WhisperASR:
         self.model = WhisperForConditionalGeneration.from_pretrained(whisper_model)
 
         if language == None: 
-            self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-            language="english", task="transcribe")
+            self.language = "english"
+            self.task = "transcribe"
             print("Defaulting to english.")
 
         else:
-            self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-                language=language, task=task)
+            self.language = language
+            self.task = task
             print("Input Language: ", language)
             print("Task: ", task)
 
@@ -109,7 +109,7 @@ class WhisperASR:
             npa, sampling_rate=16000, return_tensors="pt"
         ).input_features
 
-        predicted_ids = self.model.generate(input_features, forced_decoder_ids=self.forced_decoder_ids)
+        predicted_ids = self.model.generate(input_features, language=self.language, task=self.task)
         transcription = self.processor.batch_decode(predicted_ids,skip_special_tokens=True)[0]
         
 

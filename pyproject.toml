@@ -7,9 +7,10 @@ name = "retico-whisperasr"
 dynamic = ["version"]
 dependencies = [
     "numpy",
-    "pyaudio",
     "pydub",
+    "audioop-lts; python_version >= '3.13'",
     "retico-core>=2.0.0",
+    "torch",
     "transformers",
     "webrtcvad-wheels",
 ]
@@ -26,3 +27,8 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 
+[project.urls]
+Repository = "https://github.com/retico-team/retico-whisperasr"
+
+[tool.setuptools_scm]
+version_file = "retico_whisperasr/version.py"
